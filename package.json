@@ -1,0 +1,9 @@
+{
+  "name": "ainsof-office",
+  "private": true,
+  "description": "ainsof Office — 역할별 AI 봇과 승인 게이트로 일하는 멀티에이전트 작업 방식 (Claude Code 플러그인)",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

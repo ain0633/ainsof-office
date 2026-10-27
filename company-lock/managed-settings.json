@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "node \"C:/Program Files/ainsof/gate/gate.mjs\" pre", "timeout": 600 }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "node \"C:/Program Files/ainsof/gate/gate.mjs\" post" }] }],
+    "SubagentStart": [{ "hooks": [{ "type": "command", "command": "node \"C:/Program Files/ainsof/gate/gate.mjs\" agent-start" }] }],
+    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "node \"C:/Program Files/ainsof/gate/gate.mjs\" agent-stop" }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "node \"C:/Program Files/ainsof/gate/gate.mjs\" compact" }] }]
+  }
+}

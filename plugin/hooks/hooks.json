@@ -1,0 +1,10 @@
+{
+  "description": "간단 설치용 승인 게이트. 이 회사 봇(ainsof-office:*)의 도구 호출만 본다. 봇 전용 계정(단단한 설치)에서는 관리자 훅이 대신 보므로 아무것도 하지 않는다.",
+  "hooks": {
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/gate/gate.mjs\" pre --plugin", "timeout": 600 }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/gate/gate.mjs\" post --plugin" }] }],
+    "SubagentStart": [{ "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/gate/gate.mjs\" agent-start --plugin" }] }],
+    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/gate/gate.mjs\" agent-stop --plugin" }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/gate/gate.mjs\" compact --plugin" }] }]
+  }
+}

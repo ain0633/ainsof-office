@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "office": {
+      "command": "node",
+      "args": ["C:\\ainsof\\plugin\\ainsof-office\\channel\\office.mjs"]
+    }
+  }
+}

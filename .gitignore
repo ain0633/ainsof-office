@@ -1,0 +1,6 @@
+plugin/gate/secrets.json
+node_modules/
+.playwright-mcp/
+
+# CEO 고양이 사진 원본(위치 정보가 있을 수 있음). 봇에게는 정보를 지운 사본만 넘긴다
+고양이 사원들/

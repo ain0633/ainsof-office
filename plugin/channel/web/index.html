@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ainsof Office</title>
+<link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <h1>ainsof Office</h1>
+  <span id="conn" class="conn" role="status">연결 준비 중…</span>
+  <div id="replay-ctl" class="replay-ctl" hidden>
+    <button id="play" type="button">▶ 재생</button>
+    <div class="speeds" role="group" aria-label="재생 속도">
+      <button type="button" class="speed" data-speed="1" aria-pressed="true">1x</button>
+      <button type="button" class="speed" data-speed="4" aria-pressed="false">4x</button>
+      <button type="button" class="speed" data-speed="16" aria-pressed="false">16x</button>
+    </div>
+    <span id="progress" class="progress"></span>
+  </div>
+</header>
+<p id="replay-banner" class="banner" hidden>재생 모드 — 실제 기록을 다시 보여 줍니다</p>
+
+<main class="layout">
+  <section class="stage frame" aria-label="사무실">
+    <canvas id="office" role="img" aria-label="고양이 봇 여섯 마리가 일하는 사무실. 상태는 오른쪽 최근 활동에도 나옵니다."></canvas>
+  </section>
+
+  <aside class="side">
+    <section class="frame panel" aria-labelledby="inbox-h">
+      <h2 id="inbox-h">결재함 <span id="inbox-count" class="count">0</span></h2>
+      <p id="inbox-empty" class="empty">기다리는 승인 요청이 없어요.</p>
+      <ul id="inbox" class="cards" aria-live="polite"></ul>
+    </section>
+
+    <section class="frame panel" aria-labelledby="chat-h">
+      <h2 id="chat-h">대화</h2>
+      <ol id="chat" class="chat" aria-live="polite"></ol>
+      <p id="chat-note" class="empty" hidden>재생 모드에서는 지시를 보낼 수 없어요.</p>
+      <form id="say-form" class="say">
+        <label for="say-text" class="sr-only">PM에게 보낼 지시</label>
+        <textarea id="say-text" rows="2" placeholder="PM에게 지시하기 (Enter 보내기 · Shift+Enter 줄바꿈)"></textarea>
+        <button type="submit" class="primary">보내기</button>
+      </form>
+      <p id="say-err" class="err" role="alert"></p>
+    </section>
+
+    <section class="frame panel" aria-labelledby="act-h">
+      <h2 id="act-h">최근 활동</h2>
+      <ol id="activity" class="activity"></ol>
+    </section>
+  </aside>
+</main>
+
+<dialog id="pair" aria-labelledby="pair-h">
+  <form id="pair-form">
+    <h2 id="pair-h">사무실 연결</h2>
+    <p><label for="pair-code">디스코드 #office 에 온 6자리 코드를 넣어 주세요</label></p>
+    <input id="pair-code" type="text" inputmode="text" autocomplete="one-time-code" maxlength="6" spellcheck="false" required>
+    <p id="pair-err" class="err" role="alert"></p>
+    <button type="submit" class="primary">연결</button>
+  </form>
+</dialog>
+
+<script src="app.js?v=3"></script>
+</body>
+</html>
