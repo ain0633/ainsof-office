@@ -20,7 +20,7 @@ const base = {
   botUser: BOT_USER,
   roles: {
     "ainsof-office:operator": { tools: ["Agent", "Read", "Glob", "Grep", ...DISCORD, "mcp__office__reply"], agents: ["researcher", "developer", "reviewer", "qa", "designer", "codereview"] },
-    // 코드리뷰봇(D33): 개발봇 결과를 다른 회사 모델(Codex)이 읽기 전용으로 리뷰한다. 명령은 브랜치 바꾸기와 codex 리뷰 한 가지뿐, 파일은 쓰지 않는다.
+    // 코드리뷰봇: 개발봇 결과를 다른 회사 모델(Codex)이 읽기 전용으로 리뷰한다. 명령은 브랜치 바꾸기와 codex 리뷰 한 가지뿐, 파일은 쓰지 않는다.
     // 코드가 OpenAI 로 나간다(CEO 결정). Codex 안에서 하는 일은 게이트가 못 보므로 읽기 전용 샌드박스가 유일한 안전장치다 → 아래 codex.flags 가 그 옵션을 못 바꾸게 한다
     "ainsof-office:codereview": {
       tools: ["Read", "Glob", "Grep", "Bash"],
@@ -43,11 +43,11 @@ const base = {
       webfetchDomains: ["developer.mozilla.org", "nodejs.org", "react.dev", "vite.dev", "vitejs.dev", "playwright.dev", "docs.github.com", "code.claude.com"],
       browserHosts: ["localhost", "127.0.0.1"],
     },
-    // QA봇(D30): 완료 기준을 실행으로만 확인한다. 채점받는 코드(src 등)는 못 고치고 보고·스크린샷은 qa/ 아래에만 쓴다. 명령은 허용 목록만
+    // QA봇: 완료 기준을 실행으로만 확인한다. 채점받는 코드(src 등)는 못 고치고 보고·스크린샷은 qa/ 아래에만 쓴다. 명령은 허용 목록만
     "ainsof-office:qa": {
       tools: ["Read", "Glob", "Grep", "Write", "Bash", ...["browser_navigate", "browser_snapshot", "browser_click", "browser_type", "browser_take_screenshot", "browser_wait_for"].map((t) => PW_LOCAL + t)],
       // 작업 폴더 바로 아래 qa/ 만. src/qa/ 같은 곳은 안 된다
-      // ponytail: 역할 분리(실수 방지)용이다. qa/ 에 쓴 Playwright 시험이 node 로 src 를 고치는 것까지는 못 막는다 — 같은 봇 계정 안의 일이라 피해 상한은 개발봇과 같다
+      // 한계: 역할 분리(실수 방지)용이다. qa/ 에 쓴 Playwright 시험이 node 로 src 를 고치는 것까지는 못 막는다 — 같은 봇 계정 안의 일이라 피해 상한은 개발봇과 같다
       writePaths: /^((?:[a-z]:)?\/ainsof\/work\/[^/]+\/)?qa\/(?!.*\.\.)/i,
       shellAllow: [
         ["npm", "test"], ["npm", "ci"], ["npm", "audit"], ["npm", "ls"], ...["test", "build", "lint", "dev", "preview"].map((s) => ["npm", "run", s]),
@@ -57,8 +57,8 @@ const base = {
       ],
       browserHosts: ["localhost", "127.0.0.1"],
     },
-    // 디자이너봇(D31): 기획서·DESIGN.md·시안·pptx·docx 를 디자인 폴더에만 쓴다. 웹은 공식 가이드·오픈 라이선스 이미지 사이트만(Dribbble·Behance·Mobbin·Pinterest 는 약관상 봇 금지).
-    // ponytail: node 실행(pptxgenjs 등)이 있어 쓰기 경로 제한은 실수 방지용이다. 그래서 웹 입력을 허용 목록으로 좁혀 둔다(Rule of Two)
+    // 디자이너봇: 기획서·DESIGN.md·시안·pptx·docx 를 디자인 폴더에만 쓴다. 웹은 공식 가이드·오픈 라이선스 이미지 사이트만(Dribbble·Behance·Mobbin·Pinterest 는 약관상 봇 금지).
+    // 한계: node 실행(pptxgenjs 등)이 있어 쓰기 경로 제한은 실수 방지용이다. 그래서 웹 입력을 허용 목록으로 좁혀 둔다(Rule of Two)
     "ainsof-office:designer": {
       tools: [
         "Read", "Glob", "Grep", "Write", "Edit", "Bash", "Skill",
@@ -87,16 +87,16 @@ const base = {
     { id: "publish.external", tools: SHELL, check: "publishExternal", reason: "외부 발행·클라우드 CLI는 CEO가 직접" },
     { id: "repo.push", tools: SHELL, check: "pushOutside", reason: "넘김 저장소(handoff)의 bot/* 밖으로 푸시, 또는 원격 주소 변경" },
     { id: "delete.outside", tools: SHELL, check: "deleteOutside", reason: "작업 폴더 밖 삭제" },
-    // 사무실 페이지(D32)는 CEO 브라우저만. 봇이 열거나 명령으로 두드리면 CEO 행세·자기 승인이 된다
+    // 사무실 페이지는 CEO 브라우저만. 봇이 열거나 명령으로 두드리면 CEO 행세·자기 승인이 된다
     { id: "office.page", field: "target", re: /(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)\s*:\s*7777\b/i, reason: "사무실 페이지(CEO 전용) 접근" },
     { id: "browser.exec", tools: /__browser_(evaluate|run_code_unsafe|file_upload)$/, reason: "브라우저 임의 코드 실행·파일 업로드" },
-    // Codex 는 게이트 밖에서 도는 별도 에이전트다. 코드리뷰봇의 읽기 전용 리뷰만 허용한다(D33)
+    // Codex 는 게이트 밖에서 도는 별도 에이전트다. 코드리뷰봇의 읽기 전용 리뷰만 허용한다
     // Codex 설정 파일(봇 계정 .codex, C:\ProgramData\openai)은 위 tamper.config 가 막는다. 설정 하나로 샌드박스가 풀린다(CVE-2026-35603)
     { id: "codex.role", tools: SHELL, check: "codexCall", except: "ainsof-office:codereview", reason: "Codex 는 코드리뷰봇의 읽기 전용 리뷰로만" },
     { id: "codex.flags", tools: SHELL, field: "shell", re: /\bcodex(?:\.cmd|\.exe)?\b[^;&|\n]*?\s(--dangerously[\w-]*|--full-auto|--yolo|--add-dir|--config|--profile|--cd|-[cpsC]|--%|--sandbox\s+(?!read-only\b)\S+)(?=[\s=]|$)/i, reason: "Codex 샌드박스·설정을 바꾸는 옵션(--% 는 CVE-2026-19591)" },
   ],
   ask: [
-    // 실수 방지용이다. 인터프리터 한 줄 실행처럼 이름이 안 보이는 통신은 못 잡는다 — 근본 대책은 네트워크 차단(D-g)
+    // 실수 방지용이다. 인터프리터 한 줄 실행처럼 이름이 안 보이는 통신은 못 잡는다 — 근본 대책은 네트워크 차단
     { id: "net.http", tools: SHELL, field: "shell", re: /\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm|Start-BitsTransfer|git\s+clone|scp|ssh|sftp|rsync|ftp|certutil|bitsadmin|nc|ncat)\b|Net\.WebClient|Net\.Http\.HttpClient/i, reason: "명령어로 외부와 통신" },
     { id: "dependency.new", tools: SHELL, check: "newDependency", reason: "새 의존성: 왜 필요한지 / 없으면 / 대안을 적어 승인 요청" },
     { id: "dependency.manifest", tools: /^(Write|Edit)$/, field: "path", re: /(^|[\\/])(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|(requirements|constraints)[\w.-]*\.txt|pyproject\.toml|Pipfile(\.lock)?|poetry\.lock|uv\.lock|Cargo\.(toml|lock)|go\.(mod|sum)|Gemfile(\.lock)?|composer\.(json|lock))$/i, reason: "의존성 목록 파일 수정" },

@@ -1,4 +1,4 @@
-﻿# D21: 봇 계정의 gh 에 GitHub 토큰을 넣는다. 봇 계정의 일반 PowerShell 에서 운영실을 끈 뒤 실행한다:
+﻿# 봇 계정의 gh 에 GitHub 토큰을 넣는다. 봇 계정의 일반 PowerShell 에서 운영실을 끈 뒤 실행한다:
 #   powershell -ExecutionPolicy Bypass -File C:\ainsof\work\github-bot.ps1
 # 토큰은 CEO 계정에서 C:\ainsof\work\gh-token.txt 로 넘긴다(계정 사이에 클립보드가 공유되지 않는다). 읽은 뒤 바로 지운다.
 # 결과는 C:\ainsof\work\github-check.txt 에 남겨 CEO 계정에서 확인한다.

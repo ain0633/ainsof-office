@@ -159,7 +159,7 @@ test("명령줄로 실행하면 CEO 계정에서는 출력 없이 통과한다",
   assert.equal(out.toString(), "");
 });
 
-// 이벤트 로그 v1 (docs/이벤트-로그-v1.md, M1 T6). 칸이나 종류가 바뀌면 이 시험이 깨진다 — 그때는 v 를 올릴지 먼저 정한다(기획서 3.7)
+// 이벤트 로그 v1 (docs/이벤트-로그-v1.md, M1 T6). 칸이나 종류가 바뀌면 이 시험이 깨진다 — 그때는 v 를 올릴지 먼저 정한다
 const V1 = {
   "tool.call": ["tool", "target", "decision", "rule", "reason", "hit"],
   "tool.result": ["tool"],

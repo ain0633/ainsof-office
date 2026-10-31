@@ -18,8 +18,8 @@ export function appendReport(dir, who, text) {
   appendFileSync(join(dir, `reports-${today()}.md`), `## ${time} ${who}\n\n${text}\n\n`, "utf8");
 }
 
-// ponytail: 상태 파일 하나를 읽고 쓰므로 병렬 호출이면 카운트가 조금 틀릴 수 있다. 보조 상한이라 받아들인다.
-// 진짜 비용 상한은 사용 크레딧을 꺼 둔 Pro 한도다(추가 비용 0원, 결정로그 D19).
+// 한계: 상태 파일 하나를 읽고 쓰므로 병렬 호출이면 카운트가 조금 틀릴 수 있다. 보조 상한이라 받아들인다.
+// 진짜 비용 상한은 사용 크레딧을 꺼 둔 Pro 한도다(추가 비용 0원).
 export function bumpCounters(dir, input) {
   const sdir = join(dir, "state");
   mkdirSync(sdir, { recursive: true });

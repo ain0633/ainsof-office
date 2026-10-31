@@ -50,6 +50,13 @@ test("레시피에 특정 프로젝트 이름·설정·예시가 없다", () => 
   assert.deepEqual(hits(/VITE_|localhost:8080|\bP\d-[A-Z]\d/i), []);
 });
 
+// 간단 설치에서는 플러그인이 다른 곳에 있다. 고정 경로를 쓰면 PM 이 시작 파일을 못 찾는다(공개 점검 2026-11-01)
+test("PM 지침은 플러그인 위치를 고정하지 않는다", () => {
+  const pm = readFileSync(join(root, "plugin", "agents", "operator.md"), "utf8");
+  assert.doesNotMatch(pm, /C:.ainsof.plugin/);
+  assert.ok(pm.includes("${CLAUDE_PLUGIN_ROOT}/model-tiers.md"));
+});
+
 // 모델은 몇 주면 바뀐다. PM 지침에는 등급만 쓰고, 등급 → 모델은 대응표 한 곳에서 고친다
 test("PM 지침 본문에는 모델 이름이 없고, 대응표가 T1~T3 를 모두 정한다", () => {
   const body = readFileSync(join(root, "plugin", "agents", "operator.md"), "utf8").replace(/^---[\s\S]*?---/, "");

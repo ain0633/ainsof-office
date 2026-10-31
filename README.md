@@ -4,6 +4,14 @@ Claude Code 위에서 **역할이 다른 AI 봇 일곱**(PM·리서치·개발·
 
 > **English summary.** A Claude Code plugin that runs seven role-scoped agents (PM, researcher, developer, code reviewer, reviewer, QA, designer). The PM picks a model tier and thinking effort per task card, and the code reviewer hands each branch to OpenAI Codex in a read-only sandbox. Every tool call passes a deterministic approval gate (allow / ask / deny) written in code, not in prompts. Includes a localhost "pixel office" page for live reporting, commands and approvals. MIT licensed. Windows-first.
 
+- **문제:** 프롬프트로 적은 금지는 부탁일 뿐이라, 웹 글에 숨은 지시에 속은 봇이 어길 수 있습니다.
+- **해결:** 역할마다 도구를 좁히고, 모든 도구 호출을 AI가 아닌 코드가 판정하고, 만든 봇이 아닌 봇이 채점합니다.
+- **결과:** 도구 호출 815건 중 사람이 직접 본 것은 49건이었고, 공격 시험 188건을 고정했습니다. 다만 혼자 일하는 AI보다 더 잘한다는 증거는 없었습니다.
+
+**[재생 데모 보기](https://ainsof.dev/ainsof-office/plugin/channel/web/?replay=1)** · [설계 결정과 실패 기록](docs/설계-결정.md) · [보안 안내](SECURITY.md)
+
+> **먼저 읽어 주세요.** 간단 설치는 실수 방지 수준입니다. 실제 키나 운영 저장소를 봇에게 맡길 때는 [단단한 설치](docs/단단한-설치.md)를 쓰세요.
+
 ![사무실 페이지: 봇들이 일하는 모습, 결재함, PM과의 대화](docs/img/office.png)
 
 ## 왜 만들었나
@@ -82,7 +90,9 @@ claude --agent ainsof-office:operator --dangerously-load-development-channels se
 - 브라우저에서 http://127.0.0.1:7777 을 열고, `C:\ainsof\office-pairing.txt` 의 6자리 코드를 넣습니다.
 - Claude Code Channels가 연구 미리보기라 시작 옵션과 시작 확인이 필요합니다.
 
-**코드리뷰봇 (선택):** Codex CLI를 봇을 돌리는 계정에 설치하고 로그인합니다. 없으면 코드리뷰봇이 `blocked`로 보고하고 리뷰 없이 QA로 넘어갑니다. Windows에서는 Codex의 MXC 샌드박스를 권합니다(`~/.codex/config.toml`의 `[features]`에 `prefer_mxc = true`). 기본 샌드박스 계정은 잠근 작업 폴더에 들어가지 못해 실패했습니다.
+**코드리뷰봇 (선택):** Codex CLI를 봇을 돌리는 계정에 설치하고 로그인합니다. 없으면 코드리뷰봇이 `blocked`로 보고하고 리뷰 없이 QA로 넘어갑니다. Windows에서는 Codex의 MXC 샌드박스를 권합니다(`~/.codex/config.toml`의 `[features]`에 `prefer_mxc = true`). 기본 샌드박스 계정은 잠근 작업 폴더에 들어가지 못해 실패했습니다. **리뷰할 코드는 OpenAI로 전송됩니다.** 비공개 코드라면 ChatGPT 데이터 설정에서 학습 사용을 끄세요. Codex 안의 동작은 게이트가 보지 못하므로, 읽기 전용 샌드박스가 유일한 안전장치입니다.
+
+**PM이 참고하는 기록 (선택):** PM은 `C:\ainsof\memory` 의 `원칙.md`, `실패와-한계.md`, `결정로그`, `진행중-프로젝트.md` 를 참고합니다. 없으면 참고 기록 없이 일합니다.
 
 **디스코드 알림 (선택):** `C:\ainsof\secrets.json` 에 `{"discordWebhook": "<웹후크 URL>"}` 을 쓰면 승인 요청·차단·배정이 디스코드로 옵니다. 짝짓기 코드도 파일 대신 디스코드로 옵니다.
 
@@ -149,4 +159,4 @@ tests/                  node --test
 
 ## 라이선스
 
-[MIT](LICENSE)
+[MIT](LICENSE). 고양이 그림은 길고양이 사진을 바탕으로 만들었습니다.

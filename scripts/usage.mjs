@@ -16,7 +16,7 @@ export const PRICES = {
 const priceOf = (model = "") => PRICES[Object.keys(PRICES).find((k) => model.startsWith(k))] ?? null;
 
 // 출력 토큰 1개당 기록에 남는 글자 수. CEO 계정 메인 세션 3개(응답 881개)에서 잰 값 0.82(2026-10-14).
-// thinking 은 기록에 거의 안 남아 토큰보다 글자가 적다. ponytail: 하위 봇도 같은 비율이라고 가정한다.
+// thinking 은 기록에 거의 안 남아 토큰보다 글자가 적다. 한계: 하위 봇도 같은 비율이라고 가정한다.
 export const CHARS_PER_TOKEN = 0.8;
 const charsOf = (c) => (c?.type === "text" ? c.text : c?.type === "thinking" ? c.thinking : c?.type === "tool_use" ? JSON.stringify(c.input) : "")?.length ?? 0;
 

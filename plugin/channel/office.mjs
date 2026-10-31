@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ainsof Office 채널(D32): 노트북 안의 사무실 페이지 ↔ PM 세션.
+// ainsof Office 채널: 노트북 안의 사무실 페이지 ↔ PM 세션.
 // Claude Code 가 PM 세션을 켤 때 이 파일을 함께 띄운다(MCP, stdio 한 줄 JSON). 의존성 없음.
 // 페이지는 127.0.0.1 에서만 열리고, 디스코드 #office 로 보낸 6자리 코드로 짝지은 브라우저만 지시·결재할 수 있다.
 // 디스코드가 있으면 코드는 메모리에만 있다. 봇이 파일을 뒤져도 없고, 봇 브라우저는 이 포트를 못 연다(pw-local 허용 주소·게이트 office.page).
@@ -111,7 +111,7 @@ function broadcast(event, data) {
   for (const res of clients) res.write(chunk);
 }
 // 대화는 날짜별 파일에도 남긴다. 다시 접속하거나 운영실을 다시 켜도 그날 대화가 보인다(10/23 CEO)
-// ponytail: 오늘 파일만 읽는다. 지난 날 대화가 필요하면 그때 날짜 고르기를 붙인다
+// 한계: 오늘 파일만 읽는다. 지난 날 대화가 필요하면 그때 날짜 고르기를 붙인다
 const chatFile = () => join(LOG_DIR, `office-chat-${today()}.jsonl`);
 const history = existsSync(chatFile())
   ? readFileSync(chatFile(), "utf8").split("\n").flatMap((l) => { try { return l ? [JSON.parse(l)] : []; } catch { return []; } }).slice(-200)
@@ -167,7 +167,7 @@ async function body(req) {
   return JSON.parse(s || "{}");
 }
 
-const server = createServer(async (req, res) => {
+const route = async (req, res) => {
   if (!HOSTS.has(req.headers.host ?? "")) return json(res, 421);
   const url = new URL(req.url, ORIGIN);
   if (req.method === "POST") {
@@ -224,7 +224,9 @@ const server = createServer(async (req, res) => {
   const data = await readFile(p).catch(() => null);
   if (!data) return json(res, 404);
   res.writeHead(200, { "content-type": TYPES[extname(p)] ?? "application/octet-stream", "cache-control": "no-store" }).end(data);
-});
+};
+// async 처리기의 오류를 여기서 받는다. 놓치면 깨진 주소 한 번에 서버가 꺼진다(new URL, decodeURIComponent)
+const server = createServer((req, res) => route(req, res).catch(() => (res.headersSent ? res.destroy() : json(res, 400))));
 server.on("error", (e) => err("[office] HTTP 서버 오류:", e.message));
 server.listen(PORT, "127.0.0.1", () => {
   err(`[office] ${ORIGIN} 에서 기다립니다`);

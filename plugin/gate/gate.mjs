@@ -105,7 +105,7 @@ export async function handle(mode, input, ctx) {
   return null;
 }
 
-// 경로 표기(대소문자·슬래시·짧은 이름)가 달라도 어긋나지 않게 파일 이름으로만 본다. 어긋나면 판정 없이 통과돼 버린다(게이트-검토 S7).
+// 경로 표기(대소문자·슬래시·짧은 이름)가 달라도 어긋나지 않게 파일 이름으로만 본다. 어긋나면 판정 없이 통과돼 버린다.
 const isCli = /(^|[\\/])gate\.mjs$/i.test(process.argv[1] ?? "");
 const plugin = process.argv.includes("--plugin");
 const user = userInfo().username;

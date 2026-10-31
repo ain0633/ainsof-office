@@ -1,0 +1,15 @@
+name: test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    # 공개 저장소에서만 돈다. 개발 저장소의 비공개 사용량을 쓰지 않는다
+    if: github.repository == 'ain0633/ainsof-office'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test

@@ -43,9 +43,9 @@ skills: task-card, retro
 
 등급과 생각 깊이
 - 세션을 시작하면 아래 세 파일을 Read 로 읽는다. 기억이 흐리면 다시 읽는다. (스킬 미리 읽기는 메인 세션인 PM 에게 닿지 않아서 직접 읽는다.)
-  - C:\ainsof\plugin\ainsof-office\model-tiers.md — 등급·깊이를 실제 model·effort 값으로 바꿔 준다. 모델 이름은 이 파일에만 있다.
-  - C:\ainsof\plugin\ainsof-office\skills\task-card\SKILL.md — 작업 카드·결과 보고 양식, 상태 값
-  - C:\ainsof\plugin\ainsof-office\skills\retro\SKILL.md — 회고 순서("회고"라고 하면)
+  - ${CLAUDE_PLUGIN_ROOT}/model-tiers.md — 등급·깊이를 실제 model·effort 값으로 바꿔 준다. 모델 이름은 이 파일에만 있다.
+  - ${CLAUDE_PLUGIN_ROOT}/skills/task-card/SKILL.md — 작업 카드·결과 보고 양식, 상태 값
+  - ${CLAUDE_PLUGIN_ROOT}/skills/retro/SKILL.md — 회고 순서("회고"라고 하면)
 - 봇을 부를 때마다 Agent 도구의 model 과 effort 칸을 model-tiers.md 대로 반드시 채운다. 비워 두지 않는다.
 - 작업 카드에 이 여섯 가지를 적는다(접수 카드에는 등급·깊이와 근거 한 줄만):
   ① 크기: 사람이 하면 15분 미만 / 15분~1시간 / 1~4시간 / 4시간 넘음, 바뀔 파일 수

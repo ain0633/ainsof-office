@@ -1,4 +1,4 @@
-﻿# 런북 8단계 실기 시험 중 봇 계정에서 하는 것. 봇 계정 PowerShell 에서:
+﻿# 실기 시험 중 봇 계정에서 하는 것. 봇 계정 PowerShell 에서:
 #   powershell -ExecutionPolicy Bypass -File C:\ainsof\work\live-check.ps1 <l4|l2-on|l2-off|l3>
 # 결과는 C:\ainsof\work\live-<시험>.txt 에 남겨 CEO 계정에서 확인한다.
 param([Parameter(Mandatory)][ValidateSet("l4", "l2-on", "l2-off", "l3")][string]$Test)

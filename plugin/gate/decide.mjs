@@ -4,7 +4,7 @@ import { hasPersonalInfo } from "./redact.mjs";
 export const short = (agentType) => String(agentType ?? "").split(":").pop();
 
 // 셸 명령을 판정하기 쉽게 편다: 따옴표를 벗기고(하위 셸에 넘긴 명령도 보이게) git 의 전역 옵션(-C 경로 등)을 뺀다.
-// ponytail: 정규식 수준의 정리다. 변수 조립·인코딩 같은 난독화는 못 푼다 — 그건 NTFS 권한과 네트워크 차단이 막는다(게이트-검토 2장).
+// 한계: 정규식 수준의 정리다. 변수 조립·인코딩 같은 난독화는 못 푼다 — 그건 NTFS 권한과 네트워크 차단이 막는다.
 export function normShell(cmd) {
   return String(cmd)
     .replace(/["'`]/g, " ")
@@ -23,7 +23,7 @@ const LAUNCHERS = new Set(["npx", "bunx", "dlx", "-c", "/c", "-command", "sudo",
 const atCommand = (t, k) => k === 0 || LAUNCHERS.has(t[k - 1].toLowerCase());
 
 const PUBLISH = new Set(["aws", "az", "gcloud", "gsutil", "vercel", "netlify", "firebase", "wrangler", "supabase", "gh", "flyctl", "fly", "heroku", "railway"]);
-// D21: gh 는 이슈·라벨·PR 설명 쓰기만 통과. 토큰도 저장소 1개, 코드는 읽기 전용이라 이 목록이 뚫려도 코드는 못 바꾼다
+// gh 는 이슈·라벨·PR 설명 쓰기만 통과. 토큰도 저장소 1개, 코드는 읽기 전용이라 이 목록이 뚫려도 코드는 못 바꾼다
 const GH_OK = { issue: ["create", "edit", "comment", "view", "list", "close", "reopen"], pr: ["view", "list", "diff", "checks", "comment", "edit"], label: ["list", "create", "edit"] };
 const ghOk = (t, k) => GH_OK[t[k + 1]?.toLowerCase()]?.includes(t[k + 2]?.toLowerCase());
 export const publishExternal = (cmd) =>
@@ -155,7 +155,7 @@ export function decide(input, rules) {
   if (tool === "Agent" && !(role.agents ?? []).some((a) => ti.subagent_type === a || ti.subagent_type === `ainsof-office:${a}`)) return verdict("deny", "role.agent", `부를 수 없는 봇: ${ti.subagent_type}`);
 
   const f = fields(tool, ti);
-  // QA봇·디자이너봇처럼 쓰기 경로·명령을 좁힌 역할(D30, D31). 채점하는 봇이 채점받는 코드를, 디자이너가 앱 코드를 고치지 못하게 한다
+  // QA봇·디자이너봇처럼 쓰기 경로·명령을 좁힌 역할. 채점하는 봇이 채점받는 코드를, 디자이너가 앱 코드를 고치지 못하게 한다
   if (role.writePaths && /^(Write|Edit|NotebookEdit)$/.test(tool) && !role.writePaths.test(f.path.replace(/\\/g, "/"))) return verdict("deny", "role.write", `${short(roleName)}가 쓸 수 없는 경로`);
   if (role.shellAllow && /^(Bash|PowerShell)$/.test(tool)) {
     const bad = shellOutside(f.command, role.shellAllow, role.writePaths);

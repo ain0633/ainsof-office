@@ -1,4 +1,4 @@
-﻿# 설치된 게이트를 봇 계정에서 직접 시험한다 (런북 7-3). 봇이 스스로 거절하면 게이트까지 가지 않으므로, 훅 입력을 직접 넣는다.
+﻿# 설치된 게이트를 봇 계정에서 직접 시험한다. 봇이 스스로 거절하면 게이트까지 가지 않으므로, 훅 입력을 직접 넣는다.
 #   powershell -ExecutionPolicy Bypass -File C:\ainsof\work\gate-check.ps1
 # 막힘·승인 요청은 #office 웹후크로도 간다. 결과는 C:\ainsof\work\gate-check.txt 에 남긴다.
 if ($env:USERNAME -ne "ainsof-bot") { Write-Host "ainsof-bot 계정에서 실행하세요."; exit 1 }

@@ -1,4 +1,4 @@
-// 사무실 채널(D32): 가짜 Claude Code(stdin/stdout)와 가짜 디스코드 웹후크로 처음부터 끝까지 돌린다.
+// 사무실 채널: 가짜 Claude Code(stdin/stdout)와 가짜 디스코드 웹후크로 처음부터 끝까지 돌린다.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -134,4 +134,19 @@ test("디스코드가 없으면(간단 설치) 짝짓기 코드를 파일에 쓰
   const origin = `http://127.0.0.1:${PORT + 1}`;
   const res = await fetch(origin + "/pair", { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ code }) });
   assert.equal(res.status, 200);
+});
+
+// 공개 점검(2026-11-01): 깨진 주소 한 번에 서버가 꺼졌다. async 처리기의 오류가 프로세스를 끝낸다
+test("깨진 주소를 받아도 사무실 서버는 꺼지지 않는다", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "office-"));
+  const port = PORT + 2;
+  const child = spawn(process.execPath, [SERVER], { env: { ...process.env, OFFICE_PORT: String(port), OFFICE_LOG_DIR: dir, OFFICE_SECRETS: join(dir, "none.json"), OFFICE_PAIRING_FILE: join(dir, "p.txt") } });
+  t.after(() => child.kill());
+  await new Promise((r) => child.stderr.once("data", r));
+  const get = (path) =>
+    new Promise((res) => {
+      request({ host: "127.0.0.1", port, path, headers: { host: `127.0.0.1:${port}` } }, (x) => res(x.resume().statusCode)).on("error", (e) => res(e.code)).end();
+    });
+  for (const path of ["/%", "/%E0%A4%A"]) assert.equal(await get(path), 400, path);
+  assert.equal(await get("/index.html"), 200);
 });

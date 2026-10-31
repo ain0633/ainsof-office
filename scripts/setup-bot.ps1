@@ -1,4 +1,4 @@
-﻿# ainsof-bot 계정 준비 (런북 6-B). 봇 계정의 일반 PowerShell 에서 한 줄로 실행한다:
+﻿# ainsof-bot 계정 준비. 봇 계정의 일반 PowerShell 에서 한 줄로 실행한다:
 #   powershell -ExecutionPolicy Bypass -File C:\ainsof\work\setup-bot.ps1
 # 계정 사이에 클립보드가 공유되지 않아 명령을 이 파일에 모았다. 결과는 C:\ainsof\work 에 남겨 CEO 계정에서 확인한다.
 if ($env:USERNAME -ne "ainsof-bot") { Write-Host "ainsof-bot 계정에서 실행하세요."; exit 1 }
@@ -27,7 +27,7 @@ $sf = "$HOME\.claude\settings.json"
 New-Item -ItemType Directory -Force (Split-Path $sf) | Out-Null
 $s = if ((Test-Path $sf) -and (Get-Content $sf -Raw).Trim()) { Get-Content $sf -Raw | ConvertFrom-Json } else { New-Object psobject }
 $s | Add-Member -NotePropertyName disableClaudeAiConnectors -NotePropertyValue $true -Force
-# D21: 봇이 GitHub 에 쓰는 글·커밋에 Claude 작성 표시를 넣지 않는다. 빈 문자열 형태는 예전 버전도 읽는다(settings-reference "attribution")
+# 봇이 GitHub 에 쓰는 글·커밋에 Claude 작성 표시를 넣지 않는다. 빈 문자열 형태는 예전 버전도 읽는다(settings-reference "attribution")
 $s | Add-Member -NotePropertyName attribution -NotePropertyValue ([pscustomobject]@{ commit = ""; pr = ""; sessionUrl = $false }) -Force
 [IO.File]::WriteAllText($sf, ($s | ConvertTo-Json -Depth 20))
 
