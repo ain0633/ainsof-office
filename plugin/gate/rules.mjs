@@ -19,7 +19,17 @@ const AIT_DOCS = ["searchDocumentation", "getPage", "askQuestion"].map((t) => "m
 const base = {
   botUser: BOT_USER,
   roles: {
-    "ainsof-office:operator": { tools: ["Agent", "Read", "Glob", "Grep", ...DISCORD, "mcp__office__reply"], agents: ["researcher", "developer", "reviewer", "qa", "designer"] },
+    "ainsof-office:operator": { tools: ["Agent", "Read", "Glob", "Grep", ...DISCORD, "mcp__office__reply"], agents: ["researcher", "developer", "reviewer", "qa", "designer", "codereview"] },
+    // 코드리뷰봇(D33): 개발봇 결과를 다른 회사 모델(Codex)이 읽기 전용으로 리뷰한다. 명령은 브랜치 바꾸기와 codex 리뷰 한 가지뿐, 파일은 쓰지 않는다.
+    // 코드가 OpenAI 로 나간다(CEO 결정). Codex 안에서 하는 일은 게이트가 못 보므로 읽기 전용 샌드박스가 유일한 안전장치다 → 아래 codex.flags 가 그 옵션을 못 바꾸게 한다
+    "ainsof-office:codereview": {
+      tools: ["Read", "Glob", "Grep", "Bash"],
+      shellAllow: [
+        ["cd"], ["pwd"],
+        ...["fetch", "switch", "status", "log", "diff", "rev-parse"].map((s) => ["git", s]), ["git", "branch", "--show-current"],
+        ["codex", "exec", "--sandbox", "read-only", "review"],
+      ],
+    },
     "ainsof-office:researcher": {
       tools: ["WebSearch", "WebFetch", ...["browser_navigate", "browser_navigate_back", "browser_snapshot", "browser_take_screenshot", "browser_tabs", "browser_wait_for"].map((t) => PW_READ + t)],
     },
@@ -43,7 +53,7 @@ const base = {
         ["npm", "test"], ["npm", "ci"], ["npm", "audit"], ["npm", "ls"], ...["test", "build", "lint", "dev", "preview"].map((s) => ["npm", "run", s]),
         ["npx", "vitest"], ["npx", "tsc"], ["npx", "eslint"], ["npx", "playwright", "test"],
         ...["fetch", "switch", "status", "log", "diff", "show", "rev-parse"].map((s) => ["git", s]), ["git", "branch", "--show-current"],
-        ["cd"], ["pwd"], ["ls"], ["cat"], ["head"], ["tail"], ["wc"], ["grep"], ["echo"],
+        ["cd"], ["pwd"], ["ls"], ["cat"], ["head"], ["tail"], ["wc"], ["grep"], ["echo"], ["mkdir"], // mkdir 은 qa/ 안만(decide.mjs shellOutside)
       ],
       browserHosts: ["localhost", "127.0.0.1"],
     },
@@ -57,7 +67,7 @@ const base = {
         ...STITCH, ...AIT_DOCS,
       ],
       writePaths: /^(?:[a-z]:)?\/ainsof\/work\/(design\/|[^/]+\/docs\/design\/)(?!.*\.\.)/i,
-      shellAllow: [["node"], ["npm", "install"], ["npm", "ci"], ["npm", "ls"], ["npx", "designmd"], ["cd"], ["pwd"], ["ls"]],
+      shellAllow: [["node"], ["npm", "install"], ["npm", "ci"], ["npm", "ls"], ["npx", "designmd"], ["cd"], ["pwd"], ["ls"], ["mkdir"]],
       browserHosts: [
         "localhost", "127.0.0.1",
         "developers-apps-in-toss.toss.im", "developer.apple.com", "m3.material.io", "www.w3.org",
@@ -70,8 +80,8 @@ const base = {
   deny: [
     // .env, .env.local, prod.env 는 막고 .env.example 만 정확히 통과
     { id: "secret.env", field: "target", re: /(^|[\s"'`\\/=:])\.env(?!\.example(?=$|[\s"'`\\/;|&)]))(\.[\w*-]+)*(?=$|[\s"'`\\/;|&)*])|[\w-]\.env(?=$|[\s"'`\\/;|&)*])/im, reason: "비밀번호 파일(.env)" },
-    { id: "secret.keys", field: "target", re: /\.(pem|p12|pfx|key)(?=$|[\s"'`;|&)])|\bid_(rsa|ed25519|ecdsa|dsa)\b|[\\/]\.ssh\b|(^|[\s"'\\/~])\.(npmrc|pypirc|netrc|git-credentials|yarnrc(\.yml)?)\b|\bpip\.(conf|ini)\b|[\\/]\.(aws|azure|kube|docker)[\\/]|[\\/]gcloud[\\/]|[\\/]\.claude[\\/]channels\b|ainsof[\\/](gate[\\/])?secrets\.json|office-pairing\.txt|GitHub CLI[\\/]hosts\.yml|gh-token\.txt/i, reason: "키·토큰·인증 파일" },
-    { id: "tamper.config", tools: /^(Write|Edit|Bash|PowerShell)$/, field: "target", re: /(^|[\\/\s"'])\.claude(?=$|[\\/\s"';&|])|(Program Files|PROGRA~\d)[\\/](ainsof|ClaudeCode)|managed-settings|[\\/]\.git[\\/]hooks\b|core\.hooksPath|[\\/]ainsof[\\/](plugin|log)\b/i, reason: "회사 규칙·설정·로그 변경" },
+    { id: "secret.keys", field: "target", re: /\.(pem|p12|pfx|key)(?=$|[\s"'`;|&)])|\bid_(rsa|ed25519|ecdsa|dsa)\b|[\\/]\.ssh\b|(^|[\s"'\\/~])\.(npmrc|pypirc|netrc|git-credentials|yarnrc(\.yml)?)\b|\bpip\.(conf|ini)\b|[\\/]\.(aws|azure|kube|docker)[\\/]|[\\/]gcloud[\\/]|[\\/]\.claude[\\/]channels\b|ainsof[\\/](gate[\\/])?secrets\.json|office-pairing\.txt|GitHub CLI[\\/]hosts\.yml|gh-token\.txt|[\\/]\.codex[\\/]auth\.json/i, reason: "키·토큰·인증 파일" },
+    { id: "tamper.config", tools: /^(Write|Edit|Bash|PowerShell)$/, field: "target", re: /(^|[\\/\s"'])\.claude(?=$|[\\/\s"';&|])|(Program Files|PROGRA~\d)[\\/](ainsof|ClaudeCode)|managed-settings|[\\/]\.git[\\/]hooks\b|core\.hooksPath|[\\/]ainsof[\\/](plugin|log)\b|[\\/]\.codex[\\/]|ProgramData[\\/]openai\b/i, reason: "회사 규칙·설정·로그 변경(Codex 설정 포함)" },
     { id: "data.aihub", field: "target", re: /(^|[\\/\s"'=:])data[\\/]aihub\b/i, reason: "AI Hub 데이터(국외 반출 제한)" },
     { id: "infra.install", tools: SHELL, field: "shell", re: /\b(winget|choco|scoop|msiexec|Set-ExecutionPolicy|New-Service|netsh|runas|Install-(Module|Package|Script)|(Register|New)-ScheduledTask|schtasks|New-LocalUser|Add-LocalGroupMember|Enable-WindowsOptionalFeature|Add-WindowsCapability|dism)\b|\bsc(\.exe)?\s+(create|config)\b|\breg\s+(add|delete)\b|\bnet\s+(user|localgroup)\b/i, reason: "설치·시스템 변경·계정 생성은 CEO가 직접" },
     { id: "publish.external", tools: SHELL, check: "publishExternal", reason: "외부 발행·클라우드 CLI는 CEO가 직접" },
@@ -80,6 +90,10 @@ const base = {
     // 사무실 페이지(D32)는 CEO 브라우저만. 봇이 열거나 명령으로 두드리면 CEO 행세·자기 승인이 된다
     { id: "office.page", field: "target", re: /(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)\s*:\s*7777\b/i, reason: "사무실 페이지(CEO 전용) 접근" },
     { id: "browser.exec", tools: /__browser_(evaluate|run_code_unsafe|file_upload)$/, reason: "브라우저 임의 코드 실행·파일 업로드" },
+    // Codex 는 게이트 밖에서 도는 별도 에이전트다. 코드리뷰봇의 읽기 전용 리뷰만 허용한다(D33)
+    // Codex 설정 파일(봇 계정 .codex, C:\ProgramData\openai)은 위 tamper.config 가 막는다. 설정 하나로 샌드박스가 풀린다(CVE-2026-35603)
+    { id: "codex.role", tools: SHELL, check: "codexCall", except: "ainsof-office:codereview", reason: "Codex 는 코드리뷰봇의 읽기 전용 리뷰로만" },
+    { id: "codex.flags", tools: SHELL, field: "shell", re: /\bcodex(?:\.cmd|\.exe)?\b[^;&|\n]*?\s(--dangerously[\w-]*|--full-auto|--yolo|--add-dir|--config|--profile|--cd|-[cpsC]|--%|--sandbox\s+(?!read-only\b)\S+)(?=[\s=]|$)/i, reason: "Codex 샌드박스·설정을 바꾸는 옵션(--% 는 CVE-2026-19591)" },
   ],
   ask: [
     // 실수 방지용이다. 인터프리터 한 줄 실행처럼 이름이 안 보이는 통신은 못 잡는다 — 근본 대책은 네트워크 차단(D-g)

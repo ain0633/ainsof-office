@@ -55,6 +55,9 @@ const steps = [
   ...["memory", "plugin"].map((d) => ({ run: ["icacls", `C:\\ainsof\\${d}`, "/grant", `${BOT}:(OI)(CI)RX`] })),
   ...(existsSync("C:\\data") ? [{ run: ["icacls", "C:\\data", "/inheritance:r", "/grant:r", `${ADMINS}:(OI)(CI)F`, `${SYSTEM}:(OI)(CI)F`, `${CEO}:(OI)(CI)F`] }] : []),
   { run: ["git", "init", "--bare", `C:\\ainsof\\handoff\\${REPO}.git`] },
+  // Codex 시스템 설정 폴더: 기본 권한으로는 일반 사용자(봇 포함)도 만들 수 있다. 관리자만 쓰고 나머지는 읽기만(CVE-2026-35603)
+  { mkdir: "C:\\ProgramData\\openai\\codex" },
+  { run: ["icacls", "C:\\ProgramData\\openai", "/inheritance:r", "/grant:r", `${ADMINS}:(OI)(CI)F`, `${SYSTEM}:(OI)(CI)F`, "*S-1-5-32-545:(OI)(CI)RX"] },
 ];
 
 const describe = (s) =>

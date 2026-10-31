@@ -11,7 +11,7 @@ import { loadRules, BOT_USER } from "./rules.mjs";
 import { redact, summarize } from "./redact.mjs";
 import { appendEvent, appendReport, bumpCounters } from "./log.mjs";
 
-const NAMES = { operator: "PM", researcher: "리서치봇", developer: "개발봇", reviewer: "검수봇", qa: "QA봇", designer: "디자이너봇", main: "메인" };
+const NAMES = { operator: "PM", researcher: "리서치봇", developer: "개발봇", reviewer: "검수봇", qa: "QA봇", designer: "디자이너봇", codereview: "코드리뷰봇", main: "메인" };
 const nameOf = (agentType) => NAMES[short(agentType)] ?? short(agentType);
 
 // 승인 요청 알림에 쓸 말. DM 버튼에는 도구 이름만 와서 CEO 가 판단할 수 없었다(2026-10-15)
@@ -77,7 +77,9 @@ export async function handle(mode, input, ctx) {
     if (/^mcp__(plugin_discord_discord__(reply|edit_message)|office__reply)$/.test(input.tool_name) && r.decision !== "deny" && ti.text) appendReport(ctx.logDir, nameOf(role) + (r.decision === "ask" ? " (CEO 승인 뒤 전송)" : ""), redact(ti.text));
     if (input.tool_name === "Agent" && r.decision === "allow") {
       const card = /\bid:\s*([\w-]+)/.exec(ti.prompt ?? "")?.[1] ?? null;
-      appendEvent(ctx.logDir, { type: "task.assigned", actor, data: { to: ti.subagent_type, card } });
+      // PM 이 부를 때 고른 모델·생각 깊이(있을 때만). 등급 규칙이 실제로 지켜졌는지 회고에서 센다
+      const pick = { ...(typeof ti.model === "string" && { model: ti.model }), ...(typeof ti.effort === "string" && { effort: ti.effort }) };
+      appendEvent(ctx.logDir, { type: "task.assigned", actor, data: { to: ti.subagent_type, card, ...pick } });
       await say(`[${card ?? "작업"}] → ${nameOf(ti.subagent_type)} · 배정 · ${redact(ti.description ?? "")}`);
     }
     if (r.decision !== "allow") await say(gateMessage(nameOf(role), input.tool_name, target, r, r.decision === "ask" ? ctx.ceoId : null), r.decision === "ask" ? ctx.ceoId || undefined : undefined);
@@ -87,7 +89,8 @@ export async function handle(mode, input, ctx) {
     appendEvent(ctx.logDir, { type: "tool.result", actor, data: { tool: input.tool_name } });
     // 봇을 백그라운드로 돌리면 Agent 는 맡기자마자 끝나 상태가 없고, 결과는 봇의 SubagentHandback 으로 돌아온다
     if (input.tool_name === "Agent" || input.tool_name === "SubagentHandback") {
-      const status = /status:\s*(done|blocked|failed)\b/.exec(JSON.stringify([ti, input.tool_response ?? ""]))?.[1];
+      // Agent 의 ti 는 PM 이 쓴 지시문이라 결과가 아니다. 결과는 tool_response, SubagentHandback 은 ti 에 있다
+      const status = /status:\s*(done|needs_approval|blocked|failed)\b/.exec(JSON.stringify([input.tool_name === "Agent" ? "" : ti, input.tool_response ?? ""]))?.[1];
       if (status || input.tool_name === "SubagentHandback") {
         const from = input.tool_name === "Agent" ? ti.subagent_type : role;
         appendEvent(ctx.logDir, { type: "task.result", actor, data: { from, status: status ?? "unknown" } });

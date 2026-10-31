@@ -49,5 +49,8 @@ test("설치 스크립트 dry-run 은 할 일만 보여 주고 웹후크 주소�
   assert.match(out, /→ C:\\ainsof\\plugin\\ainsof-office/);
   assert.match(out, /managed-settings\.json/);
   assert.match(out, /git init --bare C:\\ainsof\\handoff\\app\.git/);
+  // Codex 시스템 설정 폴더는 관리자만 쓴다. 봇이 여기에 config.toml 을 만들면 읽기 전용 샌드박스가 풀린다(CVE-2026-35603)
+  assert.match(out, /폴더 만들기: C:\\ProgramData\\openai\\codex/);
+  assert.match(out, /icacls C:\\ProgramData\\openai \/inheritance:r \/grant:r \*S-1-5-32-544:\(OI\)\(CI\)F \*S-1-5-18:\(OI\)\(CI\)F \*S-1-5-32-545:\(OI\)\(CI\)RX/);
   assert.doesNotMatch(out, /webhooks\/1\/secret/);
 });

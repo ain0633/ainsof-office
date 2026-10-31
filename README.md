@@ -1,8 +1,8 @@
 # ainsof Office
 
-Claude Code 위에서 **역할이 다른 AI 봇 여섯**(PM·리서치·개발·검수·QA·디자이너)에게 일을 나눠 맡기고, 위험한 동작은 **코드로 된 승인 게이트**가 허용·승인 요청·차단으로 판정하는 멀티에이전트 작업 방식입니다. 혼자 개발하면서 실제 앱 작업에 쓰고 있습니다.
+Claude Code 위에서 **역할이 다른 AI 봇 일곱**(PM·리서치·개발·코드리뷰·검수·QA·디자이너)에게 일을 나눠 맡기고, 위험한 동작은 **코드로 된 승인 게이트**가 허용·승인 요청·차단으로 판정하는 멀티에이전트 작업 방식입니다. 혼자 개발하면서 실제 앱 작업에 쓰고 있습니다.
 
-> **English summary.** A Claude Code plugin that runs six role-scoped agents (PM, researcher, developer, reviewer, QA, designer). Every tool call passes a deterministic approval gate (allow / ask / deny) written in code, not in prompts. Includes a localhost "pixel office" page for live reporting, commands and approvals. MIT licensed. Windows-first.
+> **English summary.** A Claude Code plugin that runs seven role-scoped agents (PM, researcher, developer, code reviewer, reviewer, QA, designer). The PM picks a model tier and thinking effort per task card, and the code reviewer hands each branch to OpenAI Codex in a read-only sandbox. Every tool call passes a deterministic approval gate (allow / ask / deny) written in code, not in prompts. Includes a localhost "pixel office" page for live reporting, commands and approvals. MIT licensed. Windows-first.
 
 ![사무실 페이지: 봇들이 일하는 모습, 결재함, PM과의 대화](docs/img/office.png)
 
@@ -12,7 +12,7 @@ Claude Code 위에서 **역할이 다른 AI 봇 여섯**(PM·리서치·개발·
 
 1. **역할마다 쓸 수 있는 도구를 좁힌다.** 웹 글을 읽는 검수봇에게는 로컬 파일·명령 도구를 주지 않는다(Rule of Two).
 2. **모든 도구 호출을 게이트가 판정한다.** 비밀 파일·푸시·설치·외부 발행은 막고, 새 의존성·외부 통신·개인정보는 사람에게 묻는다.
-3. **결과는 만든 봇이 아닌 봇이 채점한다.** 개발봇의 결과는 QA봇이 실행으로, 조사 결과는 검수봇이 원문 대조로 확인한다.
+3. **결과는 만든 봇이 아닌 봇이 채점한다.** 개발봇의 결과는 다른 회사 모델(Codex)이 읽기 전용으로 리뷰하고 QA봇이 실행으로 확인한다. 조사 결과는 검수봇이 원문 대조로 확인한다.
 
 ## 구조
 
@@ -20,7 +20,8 @@ Claude Code 위에서 **역할이 다른 AI 봇 여섯**(PM·리서치·개발·
 flowchart LR
   CEO((사람)) -- 지시·결재 --> PM
   PM -- 작업 카드 --> R[리서치봇] & D[개발봇] & G[디자이너봇]
-  D -- 완료 --> Q[QA봇]
+  D -- 완료 --> C[코드리뷰봇]
+  C -- Codex 읽기 전용 리뷰 --> Q[QA봇]
   R -- 출처 달린 결과 --> V[검수봇]
   Q & V -- 판정 --> PM
   PM -- 보고 --> CEO
@@ -35,16 +36,22 @@ flowchart LR
 | PM (`operator`) | 지시를 작업 카드로 나눠 배정하고 보고 | 코드 쓰기, 웹 보기 |
 | 리서치봇 | 웹 조사 | 로컬 파일·명령 |
 | 개발봇 | 작업 저장소에서 코드·테스트 | 넘김 저장소의 `bot/*` 밖으로 푸시, 비밀 파일, 설치 |
+| 코드리뷰봇 | 개발봇이 끝낸 브랜치를 Codex에게 읽기 전용으로 리뷰시키고 지적을 그대로 전달 | 코드 수정, Codex의 샌드박스·설정을 바꾸는 옵션 |
 | 검수봇 | 출처 URL 원문을 열어 주장과 대조 | 로컬 파일·명령·WebFetch(요약을 거쳐 원문 보장이 안 됨) |
 | QA봇 | 완료 기준을 실행으로 확인 | `qa/` 밖 쓰기, 허용 목록 밖 명령 |
 | 디자이너봇 | 레퍼런스 수집 → DESIGN.md → 시안 → pptx·docx | 디자인 폴더 밖 쓰기, 허용 사이트 밖 브라우징 |
 
 규칙은 [plugin/gate/rules.mjs](plugin/gate/rules.mjs), 판정은 [plugin/gate/decide.mjs](plugin/gate/decide.mjs)에 있습니다. 판정에는 LLM을 쓰지 않습니다.
 
+## 카드마다 모델 고르기
+
+PM은 작업 카드마다 일의 성질(크기, 자동 확인 가능 여부, 읽을 양, 명세, 되돌림, 일의 모양)을 보고 등급(T1~T3)과 생각 깊이(덜·보통·더)를 고릅니다. 모델 이름은 [plugin/model-tiers.md](plugin/model-tiers.md) 한 곳에만 둡니다. 등급을 올리는 신호는 QA 불합격이나 검수 오류 같은 바깥 판정뿐이고, 모델의 자기 확신은 쓰지 않습니다. 카드마다 등급과 이유를 남겨 회고에서 다시 봅니다.
+
 ## 실제로 써 본 결과
 
 - **2026-10-14 ~ 10-24 운영 기록:** 봇의 도구 호출 815건 중 사람이 직접 본 것은 49건(승인 요청 20, 차단 29)이었습니다.
-- **레드팀 165건:** 숨은 지시에 속은 봇이 비밀 파일을 읽거나, 게이트 설정을 고치거나, 자기 승인을 하려는 경우 등을 [tests/redteam-cases.mjs](tests/redteam-cases.mjs)에 고정했습니다. `npm test`로 전부 돌립니다.
+- **레드팀 188건:** 숨은 지시에 속은 봇이 비밀 파일을 읽거나, 게이트 설정을 고치거나, 자기 승인을 하려는 경우 등을 [tests/redteam-cases.mjs](tests/redteam-cases.mjs)에 고정했습니다. `npm test`로 전부 돌립니다.
+- **Codex 리뷰(2026-10-31):** 읽기 전용 샌드박스에서 첫 리뷰가 끝났고, 지적은 0건이었습니다. 표본이 1건이라 효과는 아직 모릅니다.
 - **같은 조사 과제를 봇 회사 3회 vs 혼자 3회:** 출처 오류는 둘 다 0, 비용은 평균 $2.13 vs $1.93(API 요금 환산)이었습니다. **회사 쪽이 더 잘한다는 증거는 없었습니다.** 사람 손이 덜 가는 것이 이득이었고, 순서대로 하는 일은 나눠도 이득이 적었습니다.
 
 ## 설치 (간단 설치)
@@ -74,6 +81,8 @@ claude --agent ainsof-office:operator --dangerously-load-development-channels se
 ```
 - 브라우저에서 http://127.0.0.1:7777 을 열고, `C:\ainsof\office-pairing.txt` 의 6자리 코드를 넣습니다.
 - Claude Code Channels가 연구 미리보기라 시작 옵션과 시작 확인이 필요합니다.
+
+**코드리뷰봇 (선택):** Codex CLI를 봇을 돌리는 계정에 설치하고 로그인합니다. 없으면 코드리뷰봇이 `blocked`로 보고하고 리뷰 없이 QA로 넘어갑니다. Windows에서는 Codex의 MXC 샌드박스를 권합니다(`~/.codex/config.toml`의 `[features]`에 `prefer_mxc = true`). 기본 샌드박스 계정은 잠근 작업 폴더에 들어가지 못해 실패했습니다.
 
 **디스코드 알림 (선택):** `C:\ainsof\secrets.json` 에 `{"discordWebhook": "<웹후크 URL>"}` 을 쓰면 승인 요청·차단·배정이 디스코드로 옵니다. 짝짓기 코드도 파일 대신 디스코드로 옵니다.
 
@@ -116,7 +125,7 @@ npm test
 
 ```
 plugin/                 Claude Code 플러그인
-  agents/               봇 여섯의 지시문
+  agents/               봇 일곱의 지시문
   skills/               작업 카드, 조사 결과, 검수, 회고, 디자인 기획·출력
   gate/                 승인 게이트(판정·가림·기록)
   hooks/hooks.json      간단 설치용 게이트 훅
@@ -129,13 +138,14 @@ tests/                  node --test
 ## 한계와 다음 계획
 
 - 게이트는 글자 수준 판정입니다. 근본 대책인 네트워크 차단(샌드박스)은 아직 없습니다.
+- Codex 리뷰는 아직 1건만 돌렸고, 샌드박스 안에서 일부 git 명령이 실패했습니다. 파일이 많은 변경에서 충분히 읽는지는 더 봐야 합니다.
 - 생산성은 아직 과제 하나로만 쟀습니다. 카드마다 비용·사람 개입·재작업을 자동으로 세는 성적표가 다음 일입니다.
 - 봇 지시문이 Windows 경로(`C:\ainsof`)를 씁니다. 경로를 설정으로 빼는 일이 남았습니다.
 - 한국어 지시문입니다.
 
 ## 만든 방식
 
-설계, 게이트 규칙, 검증 기준, 운영 판단은 지은이가 했고, 구현은 Claude Code와 함께 했습니다. 개발 기록(2026-10-12부터 커밋 100여 개)은 비공개 작업 저장소에 있고, 이 저장소는 그중 공개할 부분만 옮긴 것입니다.
+설계, 게이트 규칙, 검증 기준, 운영 판단은 지은이가 했고, 구현은 Claude Code와 함께 했습니다. 개발 기록(2026-10-12부터 커밋 140여 개)은 비공개 작업 저장소에 있고, 이 저장소는 그중 공개할 부분만 옮긴 것입니다.
 
 ## 라이선스
 

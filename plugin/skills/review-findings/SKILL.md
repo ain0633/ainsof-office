@@ -7,13 +7,13 @@ description: 검수봇의 검수 결과 형식. 주장마다 원문 대조 판�
 
 ```json
 {
-  "task": "P1-V1",
-  "reviewed": "docs/research/competitors.md @ bot/P1-run1",
+  "task": "V-3",
+  "reviewed": "docs/research/competitors.md @ bot/R-12",
   "checks": [
     {
-      "claim": "PictureThis는 한국어를 지원한다",
-      "source_url": "https://apps.apple.com/kr/app/id1252497129",
-      "quote": "한국어 외 27개",
+      "claim": "앱 X는 한국어를 지원한다",
+      "source_url": "https://apps.apple.com/kr/app/<앱 id>",
+      "quote": "<초안에 적힌 인용 그대로>",
       "verdict": "match",
       "note": ""
     }

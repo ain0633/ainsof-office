@@ -76,6 +76,12 @@
     const r = s.slice('ainsof-office:'.length);
     return ROLES[r] ? r : null;
   };
+  // 자리가 없는 봇(코드리뷰봇 등)은 최근 활동에 이름만 나온다
+  const LABELS = { codereview: '코드리뷰봇' };
+  const labelOf = (s) => {
+    const r = typeof s === 'string' ? s.replace(/^ainsof-office:/, '') : '';
+    return (ROLES[r] && ROLES[r].name) || LABELS[r] || r || '?';
+  };
   const short = (s, n) => { const a = Array.from(String(s || '')); return a.length > n ? a.slice(0, n).join('') + '…' : a.join(''); };
   const hhmm = (ts) => {
     const d = new Date(ts);
@@ -136,12 +142,13 @@
         break;
       }
       case 'task.result': {
-        const from = roleOf(d.from) || actor;
+        const from = d.from ? roleOf(d.from) : actor; // 자리 없는 봇의 결과를 PM 자리에 띄우지 않는다
         if (!from) return;
         const b = bots[from];
         b.bubble = null;
         if (d.status === 'done') { b.state = 'idle'; if (fresh) b.popup = { text: '완료!', kind: 'done', start: now, until: now + 3000 }; }
         else if (d.status === 'blocked') { b.state = 'blocked'; if (fresh) b.popup = { text: '멈춤', kind: 'stop', start: now, until: now + 3000 }; }
+        else if (d.status === 'needs_approval') b.state = 'asking';
         else b.state = 'idle';
         break;
       }
@@ -159,7 +166,7 @@
   function describe(ev) {
     const d = ev.data || {};
     const who = ROLES[roleOf(ev.actor && ev.actor.role)];
-    const name = who ? who.name : '?';
+    const name = who ? who.name : labelOf(ev.actor && ev.actor.role);
     switch (ev.type) {
       case 'tool.call': {
         const t = `${d.tool || '?'} ${d.target || ''}`.trim();
@@ -168,9 +175,10 @@
         return `${name} · ${t}`;
       }
       case 'tool.result': return null; // 호출 한 줄로 충분해서 목록에선 뺌
-      case 'task.assigned': return `📋 ${name} → ${ROLES[roleOf(d.to)].name}: ${d.card || ''}`;
+      case 'task.assigned': return `📋 ${name} → ${labelOf(d.to)}: ${d.card || ''}`;
       case 'task.result': {
-        const n = (ROLES[roleOf(d.from)] || who || { name: '?' }).name;
+        const n = d.from ? labelOf(d.from) : name;
+        if (d.status === 'needs_approval') return `🔐 ${n} 승인 기다림`;
         return d.status === 'done' ? `✅ ${n} 완료` : `⏸ ${n} ${d.status === 'blocked' ? '멈춤' : (d.status || '')}`;
       }
       case 'agent.start': return `${name} 일 시작`;

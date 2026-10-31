@@ -70,7 +70,9 @@ export function shellOutside(cmd, allow, okPath) {
   const target = (r) => r.replace(/^[\d*]?>>?\s*/, "").replace(/\\/g, "/").replace(/^\.\//, "");
   const redirect = [...normShell(maskQuoted(cmd)).matchAll(REDIRECT)].map((m) => m[0].trim()).find((r) => !REDIRECT_OK.test(r) && (r.includes("..") || !okPath?.test(target(r))));
   if (redirect) return redirect;
-  return segments(cmd).map((t) => t.map(bare)).find((t) => t.length && !allow.some((a) => a.every((w, i) => w === t[i])))?.join(" ") ?? false;
+  // mkdir 은 쓰기 허용 경로 안에서만(QA봇의 qa/, 디자이너봇의 디자인 폴더). 인자마다 본다
+  const outside = (t) => t[0] === "mkdir" && t.slice(1).some((x) => !x.startsWith("-") && (x.includes("..") || !okPath?.test(target(x))));
+  return segments(cmd).map((t) => t.map(bare)).find((t) => t.length && (!allow.some((a) => a.every((w, i) => w === t[i])) || outside(t)))?.join(" ") ?? false;
 }
 
 const RECURSIVE =/\b(rm\s+(-\w*[rR]\w*|--recursive)\b|(Remove-Item|ri|rd|rmdir|del|erase)\b.*\s-r(e(c(u(r(s(e)?)?)?)?)?)?\b|(rmdir|rd|del)\s+\/s)/i;
@@ -81,7 +83,11 @@ export function deleteOutside(cmd) {
     .some((seg) => RECURSIVE.test(seg) && OUTSIDE.test(seg));
 }
 
+// 명령 자리에 codex(npx @openai/codex 포함)가 오는지
+export const codexCall = (cmd) => segments(cmd).some((t) => t.some((x, k) => atCommand(t, k) && /^(@openai\/)?codex(@[\w.-]+)?$/.test(bare(x))));
+
 const CHECKS = {
+  codexCall: (f) => codexCall(f.command),
   newDependency: (f) => newDependency(f.command),
   deleteOutside: (f) => deleteOutside(f.command),
   pushOutside: (f) => pushOutside(f.command),
@@ -156,6 +162,7 @@ export function decide(input, rules) {
     if (bad) return verdict("deny", "role.shell", `${short(roleName)} 허용 목록 밖 명령`, bad);
   }
   for (const r of rules.deny) {
+    if (r.except === roleName) continue;
     const m = matches(r, tool, f);
     if (m) return verdict("deny", r.id, r.reason, m);
   }

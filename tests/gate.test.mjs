@@ -113,6 +113,16 @@ test("작업 카드 배정과 결과가 로그에 남는다", async () => {
   assert.equal(ev[3].data.status, "done");
 });
 
+test("봇을 부를 때 지정한 모델·생각 깊이를 배정 기록에 남긴다(없으면 칸도 없다)", async () => {
+  const c = ctx();
+  const O = "ainsof-office:operator";
+  await handle("pre", { agent_type: O, tool_name: "Agent", tool_input: { subagent_type: "ainsof-office:researcher", description: "x", prompt: "id: R-1", model: "haiku", effort: "low" } }, c);
+  await handle("pre", { agent_type: O, tool_name: "Agent", tool_input: { subagent_type: "ainsof-office:researcher", description: "x", prompt: "id: R-2" } }, c);
+  const [a, b] = events(c.logDir).filter((e) => e.type === "task.assigned");
+  assert.deepEqual(a.data, { to: "ainsof-office:researcher", card: "R-1", model: "haiku", effort: "low" });
+  assert.deepEqual(b.data, { to: "ainsof-office:researcher", card: "R-2" });
+});
+
 test("백그라운드로 맡긴 작업은 결과가 SubagentHandback 으로 돌아올 때 기록한다", async () => {
   const c = ctx();
   const ti = { subagent_type: "ainsof-office:developer", description: "push 시험", prompt: "id: P0-D1\n..." };
@@ -121,6 +131,20 @@ test("백그라운드로 맡긴 작업은 결과가 SubagentHandback 으로 돌�
   const ev = events(c.logDir);
   assert.deepEqual(ev.map((e) => e.type), ["tool.result", "tool.result", "task.result"]); // 맡긴 순간에는 결과를 남기지 않는다
   assert.deepEqual([ev[2].data.from, ev[2].data.status], ["ainsof-office:developer", "blocked"]);
+});
+
+// CR-1(2026-10-31): 카드 지시문의 "status: blocked" 를 결과로 읽어 봇이 움직이기도 전에 blocked 가 찍혔다
+test("카드 지시문에 적힌 status 는 결과로 치지 않는다", async () => {
+  const c = ctx();
+  const ti = { subagent_type: "ainsof-office:codereview", description: "리뷰", prompt: "id: CR-1\n못 돌리면 status: blocked 로 보고한다" };
+  await handle("post", { agent_type: "ainsof-office:operator", tool_name: "Agent", tool_input: ti, tool_response: { content: "Agent started in background" } }, c);
+  assert.deepEqual(events(c.logDir).map((e) => e.type), ["tool.result"]);
+});
+
+test("시안 승인을 기다리는 결과는 needs_approval 로 기록한다", async () => {
+  const c = ctx();
+  await handle("post", { agent_type: "ainsof-office:designer", agent_id: "g1", tool_name: "SubagentHandback", tool_input: { result: "디자인 C3 · 단계 기획\nstatus: needs_approval" } }, c);
+  assert.equal(events(c.logDir).at(-1).data.status, "needs_approval");
 });
 
 test("봇 시작·종료·압축이 로그에 남는다", async () => {
@@ -139,7 +163,7 @@ test("명령줄로 실행하면 CEO 계정에서는 출력 없이 통과한다",
 const V1 = {
   "tool.call": ["tool", "target", "decision", "rule", "reason", "hit"],
   "tool.result": ["tool"],
-  "task.assigned": ["to", "card"],
+  "task.assigned": ["to", "card", "model", "effort"], // model·effort 는 PM 이 지정했을 때만(선택 칸, v1 그대로)
   "task.result": ["from", "status"],
   "agent.start": [],
   "agent.stop": [],

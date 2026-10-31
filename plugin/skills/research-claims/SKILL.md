@@ -8,18 +8,18 @@ description: 리서치봇의 조사 결과 형식. 모든 주장에 출처 URL�
 ```json
 {
   "id": "R-0001",
-  "task": "P0-R1",
+  "task": "R-12",
   "question": "조사 질문",
   "claims": [
     {
-      "claim": "앱 X는 사진을 찍으면 병해충 후보를 보여 준다",
+      "claim": "앱 X는 무료로 쓸 수 있고 앱 안에서 구독을 판다",
       "kind": "fact",
       "source_url": "https://...",
       "quote": "원문 문장 그대로 (번역하지 않는다)",
       "accessed": "YYYY-MM-DD"
     }
   ],
-  "unknowns": ["앱 Y의 진단 정확도: 공개 자료 없음"]
+  "unknowns": ["앱 Y의 월 사용자 수: 공개 자료 없음"]
 }
 ```
 

@@ -7,7 +7,7 @@
     {
       "name": "ainsof-office",
       "source": "./plugin",
-      "description": "역할별 AI 봇 여섯(PM·리서치·개발·검수·QA·디자이너)과 코드로 된 승인 게이트, 사무실 페이지"
+      "description": "역할별 AI 봇 일곱(PM·리서치·개발·코드리뷰·검수·QA·디자이너)과 코드로 된 승인 게이트, 사무실 페이지"
     }
   ],
   "metadata": {
