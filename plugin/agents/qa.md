@@ -16,6 +16,7 @@ maxTurns: 60
 - 기준이 실행으로 확인할 수 없는 문장이면 `blocked` 로 두고 "기준을 실행 가능한 문장으로 바꿔 달라"고 적는다.
 - 쓸 수 있는 명령은 게이트 허용 목록뿐이다(npm test·ci·audit·run test/build/lint/dev/preview, npx vitest·tsc·eslint·playwright test, git fetch·switch·status·log·diff·show, cat·grep·ls 등, 폴더 만들기는 `mkdir -p qa/<카드id>` 처럼 qa/ 안만). 목록 밖 명령이 막히면 다시 시도하지 않고 보고에 적는다.
 - 파일은 `qa/` 아래에만 쓴다. `qa/` 는 커밋하지 않는다.
+- 쓰기나 명령이 막히면 다른 경로로 돌아가지 말고 그 기준을 `blocked` 로 보고한다. 카드가 지정한 경로가 막혀도 같다.
 - 결과는 아래 형식 하나로 돌려준다. 마지막 줄에 `status: done` 또는 `status: blocked` 를 적는다.
 
 ```

@@ -38,13 +38,17 @@
     developer: { name: '개발봇', seat: [0, 1],
       extra: [[7, 3, 'p'], [8, 3, 'p'], [2, 12, 'p'], [13, 12, 'p']],
       pal: { o: '#5a3016', b: '#e48b3e', p: '#b9612a', q: '#b9612a', w: '#fbf6ee', e: '#2a1c12', n: '#e68f8f' } },
-    reviewer: { name: '검수봇', seat: [1, 1], extra: [],
+    // 코드리뷰봇: 흰 고양이. 다른 회사의 두 번째 눈이라 눈 색이 양쪽 다르다(r)
+    codereview: { name: '코드리뷰봇', seat: [1, 1], extra: [[10, 5, 'r'], [10, 6, 'r']],
+      pal: { o: '#77726c', b: '#ffffff', p: '#ffffff', q: '#ffffff', w: '#efebe3', e: '#3f7fb5', r: '#d9a441', n: '#f2a6b0' } },
+    reviewer: { name: '검수봇', seat: [3, 1], extra: [],
       pal: { o: '#33373c', b: '#8d9298', p: '#6a6f76', q: '#6a6f76', w: '#f5f5f3', e: '#20242a', n: '#de9aa0' } },
     qa: { name: 'QA봇', seat: [2, 1],
       extra: [[2, 2, 'p'], [3, 2, 'p'], [2, 3, 'p'], [3, 3, 'p'], [2, 4, 'p'], [12, 2, 'q'], [13, 2, 'q'], [12, 3, 'q'], [2, 10, 'p'], [3, 10, 'p'], [2, 12, 'p'], [12, 10, 'q'], [13, 10, 'q'], [12, 12, 'q'], [3, 13, 'q'], [4, 13, 'q'], [10, 13, 'p'], [11, 13, 'p']],
       pal: { o: '#2e2620', b: '#f6f1e7', p: '#e0873a', q: '#2c2521', w: '#fffdf8', e: '#2a2119', n: '#e3949a' } },
   };
-  const COL_X = [50, 150, 250], ROW_Y = [46, 126]; // 고양이 가운데 x, 머리 위 y
+  // 고양이 가운데 x(줄마다), 머리 위 y. 윗줄은 PM 책상 옆에 결재함이 있어 3칸, 아랫줄은 4칸
+  const COL_X = [[50, 150, 250], [38, 112, 188, 262]], ROW_Y = [46, 126];
   const MAIL_X = 86;                                 // 결재함 (PM 책상 오른쪽)
 
   function makeCat(role) {
@@ -76,11 +80,9 @@
     const r = s.slice('ainsof-office:'.length);
     return ROLES[r] ? r : null;
   };
-  // 자리가 없는 봇(코드리뷰봇 등)은 최근 활동에 이름만 나온다
-  const LABELS = { codereview: '코드리뷰봇' };
   const labelOf = (s) => {
     const r = typeof s === 'string' ? s.replace(/^ainsof-office:/, '') : '';
-    return (ROLES[r] && ROLES[r].name) || LABELS[r] || r || '?';
+    return (ROLES[r] && ROLES[r].name) || r || '?';
   };
   const short = (s, n) => { const a = Array.from(String(s || '')); return a.length > n ? a.slice(0, n).join('') + '…' : a.join(''); };
   const hhmm = (ts) => {
@@ -474,7 +476,7 @@
 
   const LED = { idle: '#8a8178', working: '#7fd16b', assigned: '#f0c24a', asking: '#f0c24a', blocked: '#e04848' };
   function drawBot(role, t, now) {
-    const b = bots[role], [col, row] = ROLES[role].seat, cx = COL_X[col], top = ROW_Y[row];
+    const b = bots[role], [col, row] = ROLES[role].seat, cx = COL_X[row][col], top = ROW_Y[row];
     const r = (...a) => rect(g, ...a);
     const busy = b.state === 'working' || b.state === 'assigned';
     const bob = b.state === 'working' && Math.floor(t / 250) % 2 ? -2 : 0;
@@ -562,11 +564,11 @@
     v.textBaseline = 'middle';
     label(cards.size ? `결재함 ${cards.size}` : '결재함', (MAIL_X + 10) * S, 94 * S, fs);
     for (const [role, info] of Object.entries(ROLES)) {
-      const [col, row] = info.seat, cx = COL_X[col] * S, top = ROW_Y[row];
+      const [col, row] = info.seat, cx = COL_X[row][col] * S, top = ROW_Y[row];
       label(info.name, cx, (top + 48) * S, fs);
     }
     for (const [role, info] of Object.entries(ROLES)) {
-      const b = bots[role], [col, row] = info.seat, cx = COL_X[col] * S;
+      const b = bots[role], [col, row] = info.seat, cx = COL_X[row][col] * S;
       let y = (ROW_Y[row] - 1) * S;
       if (b.bubble && b.bubble.until < now) b.bubble = null;
       if (b.bubble) y = bubble(b.bubble, cx, y, fs, clamp((b.bubble.until - now) / 500, 0, 1));
