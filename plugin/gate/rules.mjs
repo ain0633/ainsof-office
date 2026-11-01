@@ -93,11 +93,12 @@ const base = {
     // Codex 는 게이트 밖에서 도는 별도 에이전트다. 코드리뷰봇의 읽기 전용 리뷰만 허용한다
     // Codex 설정 파일(봇 계정 .codex, C:\ProgramData\openai)은 위 tamper.config 가 막는다. 설정 하나로 샌드박스가 풀린다(CVE-2026-35603)
     { id: "codex.role", tools: SHELL, check: "codexCall", except: "ainsof-office:codereview", reason: "Codex 는 코드리뷰봇의 읽기 전용 리뷰로만" },
-    { id: "codex.flags", tools: SHELL, field: "shell", re: /\bcodex(?:\.cmd|\.exe)?\b[^;&|\n]*?\s(--dangerously[\w-]*|--full-auto|--yolo|--add-dir|--config|--profile|--cd|-[cpsC]|--%|--sandbox\s+(?!read-only\b)\S+)(?=[\s=]|$)/i, reason: "Codex 샌드박스·설정을 바꾸는 옵션(--% 는 CVE-2026-19591)" },
+    { id: "codex.flags", tools: SHELL, check: "codexFlags", reason: "Codex 는 정해진 읽기 전용 리뷰 명령만(샌드박스·설정·출력 파일 옵션 금지, --% 는 CVE-2026-19591)" },
   ],
   ask: [
-    // 실수 방지용이다. 인터프리터 한 줄 실행처럼 이름이 안 보이는 통신은 못 잡는다 — 근본 대책은 네트워크 차단
+    // 실수 방지용이다. 스크립트 파일 안에서 하는 통신은 못 잡는다 — 근본 대책은 네트워크 차단
     { id: "net.http", tools: SHELL, field: "shell", re: /\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm|Start-BitsTransfer|git\s+clone|scp|ssh|sftp|rsync|ftp|certutil|bitsadmin|nc|ncat)\b|Net\.WebClient|Net\.Http\.HttpClient/i, reason: "명령어로 외부와 통신" },
+    { id: "exec.inline", tools: SHELL, check: "inlineCode", reason: "코드를 명령에 바로 넣어 실행(node -e, python -c 등). 코드를 보고 승인" },
     { id: "dependency.new", tools: SHELL, check: "newDependency", reason: "새 의존성: 왜 필요한지 / 없으면 / 대안을 적어 승인 요청" },
     { id: "dependency.manifest", tools: /^(Write|Edit)$/, field: "path", re: /(^|[\\/])(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|(requirements|constraints)[\w.-]*\.txt|pyproject\.toml|Pipfile(\.lock)?|poetry\.lock|uv\.lock|Cargo\.(toml|lock)|go\.(mod|sum)|Gemfile(\.lock)?|composer\.(json|lock))$/i, reason: "의존성 목록 파일 수정" },
     { id: "git.history", tools: SHELL, field: "shell", re: /\bgit\s+(reset\s+--hard|clean\b[^;&|\n]*(\s-\w*f|--force)|push\b[^;&|\n]*(--force|\s-f\b|\s\+\S)|branch\b[^;&|\n]*(\s-D\b|\s-\w*D|--delete\s+--force)|filter-branch|filter-repo|update-ref\s+-d|checkout\b[^;&|\n]*\s--(\s|$)|restore\b|stash\s+(drop|clear)|reflog\s+(expire|delete))/i, reason: "git 기록 지우기·변경 버리기" },

@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, existsSync, readFil
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sumUsage, summarizeSession } from "../scripts/usage.mjs";
+import { scorecard, totals } from "../scripts/scorecard.mjs";
 
 const line = (o) => JSON.stringify(o);
 const usageLine = (id, model, usage, ts) => line({ type: "assistant", timestamp: ts, message: { id, model, usage } });
@@ -51,4 +52,28 @@ test("사용량 합산: 하위 봇 출력 토큰은 여러 줄에 나뉜 내용 
   assert.equal(rows.main.output, 5);
   assert.equal(rows.unknown.output, 1000); // (400 + 400) / 0.8
   assert.equal(rows.unknown.estimated, 1);
+});
+
+test("성적표: 카드와 봇을 짝지어 시도·개입·재작업을 세고, 재시도 사이 대기는 빼며, 지시문의 가짜 결과는 무시한다", () => {
+  const pm = { role: "ainsof-office:operator", session_id: "s" };
+  const bot = (agent_id) => ({ role: "ainsof-office:developer", session_id: "s", agent_id });
+  const at = (m) => new Date(Date.UTC(2026, 9, 1, 0, m)).toISOString();
+  const rows = scorecard([
+    { ts: at(0), type: "task.assigned", actor: pm, data: { to: "ainsof-office:developer", card: "A-1", model: "haiku", effort: "low" } },
+    { ts: at(0), type: "task.result", actor: pm, data: { status: "blocked" } },
+    { ts: at(0), type: "agent.start", actor: bot("a"), data: {} },
+    { ts: at(1), type: "tool.call", actor: bot("a"), data: { decision: "allow" } },
+    { ts: at(2), type: "tool.call", actor: bot("a"), data: { decision: "ask" } },
+    { ts: at(2), type: "task.result", actor: bot("a"), data: { status: "blocked" } },
+    { ts: at(60), type: "task.assigned", actor: pm, data: { to: "ainsof-office:developer", card: "A-1" } },
+    { ts: at(60), type: "agent.start", actor: bot("b"), data: {} },
+    { ts: at(61), type: "tool.call", actor: bot("b"), data: { decision: "deny" } },
+    { ts: at(61), type: "task.result", actor: bot("b"), data: { status: "done" } },
+    { ts: at(70), type: "task.assigned", actor: pm, data: { to: "ainsof-office:developer", card: "A-1-fix" } },
+    { ts: at(99), type: "tool.call", actor: bot("x"), data: { decision: "allow" } },
+  ]);
+  assert.equal(rows.length, 2);
+  const [a] = rows;
+  assert.deepEqual([a.tries, a.tools, a.ask, a.deny, a.status, a.tier, a.ms], [2, 3, 1, 1, "done", "haiku/low", 180000]);
+  assert.deepEqual(totals(rows), { cards: 2, tries: 3, rework: 2, ask: 1, deny: 1, tools: 3, done: 1 });
 });

@@ -6,9 +6,10 @@ export const short = (agentType) => String(agentType ?? "").split(":").pop();
 // 셸 명령을 판정하기 쉽게 편다: 따옴표를 벗기고(하위 셸에 넘긴 명령도 보이게) git 의 전역 옵션(-C 경로 등)을 뺀다.
 // 한계: 정규식 수준의 정리다. 변수 조립·인코딩 같은 난독화는 못 푼다 — 그건 NTFS 권한과 네트워크 차단이 막는다.
 export function normShell(cmd) {
+  // 옵션 값을 먼저 뗀다. 따옴표를 먼저 벗기면 "my app" 의 app 이 하위 명령 자리에 남아 push·reset 판정을 비껴간다(Codex 리뷰 2026-11-01)
   return String(cmd)
-    .replace(/["'`]/g, " ")
-    .replace(/\bgit(?:\.exe)?(?:\s+(?:-C|-c|--git-dir|--work-tree|--namespace)(?:=\S+|\s+\S+)|\s+--?[\w-]+(?:=\S+)?)*(?=\s+[a-z])/gi, "git");
+    .replace(/\bgit(?:\.exe)?(?:\s+(?:-C|-c|--git-dir|--work-tree|--namespace)(?:=|\s+)(?:\\?"[^"]*"|'[^']*'|\S+)|\s+--?[\w-]+(?:=\S+)?)*(?=\s+["'`]?[a-z])/gi, "git")
+    .replace(/["'`]/g, " ");
 }
 // 출력 돌림(2>&1, > 파일, *> 파일)은 먼저 뺀다. 안 빼면 2>&1 의 & 에서 명령이 잘리고 "2>" 가 인자로 남는다(9단계 run 1)
 const REDIRECT = /[\d*]?>>?(?:&\d+|\s*[^\s;&|]+)?/g;
@@ -28,7 +29,7 @@ const GH_OK = { issue: ["create", "edit", "comment", "view", "list", "close", "r
 const ghOk = (t, k) => GH_OK[t[k + 1]?.toLowerCase()]?.includes(t[k + 2]?.toLowerCase());
 export const publishExternal = (cmd) =>
   segments(cmd).some((t) => t.some((x, k) => atCommand(t, k) && PUBLISH.has(bare(x)) && !(bare(x) === "gh" && ghOk(t, k)))) ||
-  segments(cmd).some((t) => t.map(bare).join(" ").includes("npm publish"));
+  segments(cmd).some((t) => t.some((x, i) => /^(npm|pnpm|yarn|bun)$/.test(bare(x)) && t[i + 1] !== "run" && t.slice(i + 1, i + 6).includes("publish"))); // 사이에 --workspace 같은 옵션이 낄 수 있다
 
 // 새 패키지 설치. 패키지 관리자 뒤 몇 칸 안에서 하위 명령을 찾는다(사이에 --prefix 같은 전역 옵션이 낄 수 있다).
 const INSTALL = { npm: ["install", "i", "add"], pnpm: ["install", "i", "add", "dlx"], yarn: ["add", "dlx"], bun: ["install", "i", "add"], pip: ["install"], pip3: ["install"], pipx: ["install", "run"], uv: ["add"], poetry: ["add"], cargo: ["add", "install"], go: ["get", "install"], gem: ["install"], composer: ["require"] };
@@ -37,7 +38,7 @@ export function newDependency(cmd) {
     t.some((x, i) => {
       const pm = bare(x);
       if (pm === "bunx" || pm === "uvx") return true;
-      if (pm === "npx") return t.slice(i + 1).some((y) => /^(-y|--yes|-p|--package)\b/.test(y));
+      if (pm === "npx" || (pm === "npm" && t[i + 1] === "exec")) return t.slice(i + 1).some((y) => /^(-y|--yes|-p|--package)\b/.test(y));
       if (pm === "npm" && t[i + 1] === "pkg" && t[i + 2] === "set") return true;
       const subs = INSTALL[pm];
       if (!subs) return false;
@@ -50,15 +51,19 @@ export function newDependency(cmd) {
   );
 }
 
+// 한 번만 설정을 바꿔 원격 주소를 돌리거나 임의 명령을 끼우는 옵션. normShell 이 -c 를 떼므로 원문에서 본다
+const GIT_OVERRIDE = /\bgit(?:\.exe)?\b[^;&|\n]*?\s(?:-c\s*|--config-env[=\s])["']?(?:remote\.|url\.|alias\.|credential\.|core\.(?:sshcommand|hookspath|gitproxy|fsmonitor|pager|editor))|\bGIT_CONFIG_(?:COUNT|PARAMETERS)\b/i;
 // 넘김 저장소(handoff)의 bot/* 브랜치로 가는 푸시만 통과. 원격 주소를 바꾸는 명령도 막는다.
 export function pushOutside(cmd) {
+  if (GIT_OVERRIDE.test(cmd)) return true;
   return segments(cmd).some((t) => {
     const g = t.findIndex((x) => bare(x) === "git");
     if (g < 0) return false;
     const [sub, ...rest] = t.slice(g + 1);
     if (sub === "remote") return /^(add|set-url|rename|remove|rm)$/.test(rest[0] ?? "");
-    if (sub === "config") return rest.some((x) => /^remote\./i.test(x));
+    if (sub === "config") return rest.some((x) => /^(remote|url)\./i.test(x));
     if (sub !== "push") return false;
+    if (rest.some((x) => /^--(tags|follow-tags|all|mirror|prune)$/.test(x))) return true; // 적은 브랜치 말고 다른 참조까지 보낸다
     const [remote, ...refs] = rest.filter((x) => !x.startsWith("-"));
     return remote !== "handoff" || refs.length === 0 || refs.some((r) => !/^bot\//.test(r.replace(/^\+/, "").split(":").pop()));
   });
@@ -71,7 +76,8 @@ export function shellOutside(cmd, allow, okPath) {
   const redirect = [...normShell(maskQuoted(cmd)).matchAll(REDIRECT)].map((m) => m[0].trim()).find((r) => !REDIRECT_OK.test(r) && (r.includes("..") || !okPath?.test(target(r))));
   if (redirect) return redirect;
   // mkdir 은 쓰기 허용 경로 안에서만(QA봇의 qa/, 디자이너봇의 디자인 폴더). 인자마다 본다
-  const outside = (t) => t[0] === "mkdir" && t.slice(1).some((x) => !x.startsWith("-") && (x.includes("..") || !okPath?.test(target(x))));
+  // git diff --output 은 출력 돌림과 같은 일을 하는 옵션이다
+  const outside = (t) => (t[0] === "git" && t.some((x) => /^--output(=|$)/.test(x))) || (t[0] === "mkdir" && t.slice(1).some((x) => !x.startsWith("-") && (x.includes("..") || !okPath?.test(target(x)))));
   return segments(cmd).map((t) => t.map(bare)).find((t) => t.length && (!allow.some((a) => a.every((w, i) => w === t[i])) || outside(t)))?.join(" ") ?? false;
 }
 
@@ -84,10 +90,43 @@ export function deleteOutside(cmd) {
 }
 
 // 명령 자리에 codex(npx @openai/codex 포함)가 오는지
-export const codexCall = (cmd) => segments(cmd).some((t) => t.some((x, k) => atCommand(t, k) && /^(@openai\/)?codex(@[\w.-]+)?$/.test(bare(x))));
+const isCodex = (t, k) => atCommand(t, k) && /^(@openai\/)?codex(@[\w.-]+)?$/.test(bare(t[k]));
+export const codexCall = (cmd) => segments(cmd).some((t) => t.some((_, k) => isCodex(t, k)));
+// 옵션을 하나씩 막으면 붙여 쓰기(-cx=y), 출력 파일(--output-last-message)처럼 또 샌다. 코드리뷰봇 지침의 한 가지 모양만 통과시킨다
+export const codexFlags = (cmd) =>
+  segments(cmd).some((t) => {
+    const k = t.findIndex((_, i) => isCodex(t, i));
+    return k >= 0 && !/^exec --sandbox read-only review --base [\w./-]+$/.test(t.slice(k + 1).join(" "));
+  });
+
+// 코드를 파일 없이 명령에 바로 넣는 실행(-e, -c, 표준 입력). 무엇을 하는지 net.http 의 이름 검사로는 안 보인다.
+// 한계: 글자 검사라 파일로 써서 돌리는 코드는 못 잡는다. 그쪽은 네트워크 차단(WSL2 샌드박스)이 막는다
+const NODE_INLINE = /^(-[ep]+|--(eval|print)(=.*)?)$/;
+const INLINE = { node: NODE_INLINE, bun: NODE_INLINE, python: /^-[a-z]*c$/i, perl: /^-[a-z]*e$/i, ruby: /^-[a-z]*e$/i, php: /^-r$/, powershell: /^[-/](c|com\w*|e|ec|en\w*)$/i };
+const interpreter = (x) => {
+  const n = bare(x.split(/[\\/]/).pop());
+  return /^py(thon[\d.]*)?$/.test(n) ? "python" : n === "pwsh" ? "powershell" : n;
+};
+export function inlineCode(cmd) {
+  return segments(cmd).some((t) =>
+    t.some((x, k) => {
+      const re = INLINE[interpreter(x)];
+      if (!re || !(atCommand(t, k) || t.slice(0, k).every((y) => /^(env|\w+=.*)$/i.test(y)))) return false;
+      if (k > 1 && /^[-/]/.test(t[k - 1]) && !/^(bash|sh|zsh|cmd|powershell)$/.test(interpreter(t[k - 2]))) return false; // grep -c node 의 -c 는 실행기가 아니다
+      const args = t.slice(k + 1);
+      const pos = args.findIndex((y) => !y.startsWith("-") || y === "-");
+      const flags = pos < 0 ? args : args.slice(0, pos);
+      if (flags.some((y) => re.test(y))) return true;
+      if (pos >= 0) return args[pos] === "-" || args[pos].startsWith("<");
+      return !flags.some((y) => /^(-v|-V|--version|-h|--help)$/.test(y)); // 스크립트 없이 인터프리터만: 표준 입력을 실행한다
+    }),
+  );
+}
 
 const CHECKS = {
   codexCall: (f) => codexCall(f.command),
+  codexFlags: (f) => codexFlags(f.command),
+  inlineCode: (f) => inlineCode(f.command),
   newDependency: (f) => newDependency(f.command),
   deleteOutside: (f) => deleteOutside(f.command),
   pushOutside: (f) => pushOutside(f.command),

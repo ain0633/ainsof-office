@@ -67,7 +67,8 @@ export async function handle(mode, input, ctx) {
 
   if (mode === "pre") {
     let r = decide(input, ctx.rules);
-    if (r.decision !== "deny") {
+    // 봇의 마지막 보고는 상한에 걸리지 않는다. 막히면 멈춘 이유까지 사라진다
+    if (r.decision !== "deny" && input.tool_name !== "SubagentHandback") {
       const c = bumpCounters(ctx.logDir, input);
       if (c.repeat >= ctx.rules.limits.repeatSame) r = { decision: "deny", rule: "limit.repeat", reason: `같은 호출 ${c.repeat}번 연속` };
       else if (c.daily > ctx.rules.limits.dailyToolCalls) r = { decision: "deny", rule: "limit.daily", reason: "하루 도구 호출 상한" };
@@ -89,8 +90,12 @@ export async function handle(mode, input, ctx) {
     appendEvent(ctx.logDir, { type: "tool.result", actor, data: { tool: input.tool_name } });
     // 봇을 백그라운드로 돌리면 Agent 는 맡기자마자 끝나 상태가 없고, 결과는 봇의 SubagentHandback 으로 돌아온다
     if (input.tool_name === "Agent" || input.tool_name === "SubagentHandback") {
-      // Agent 의 ti 는 PM 이 쓴 지시문이라 결과가 아니다. 결과는 tool_response, SubagentHandback 은 ti 에 있다
-      const status = /status:\s*(done|needs_approval|blocked|failed)\b/.exec(JSON.stringify([input.tool_name === "Agent" ? "" : ti, input.tool_response ?? ""]))?.[1];
+      // Agent 의 ti 는 PM 이 쓴 지시문이라 결과가 아니다. 백그라운드로 맡기면 응답에도 지시문이 되돌아오므로 그 글자를 지운다.
+      // 결과는 마지막 줄의 status 다. 본문에 인용된 status(Codex 지적 등)는 앞에 있으므로 마지막 것만 쓴다
+      const agent = input.tool_name === "Agent";
+      const said = JSON.stringify([agent ? "" : ti, input.tool_response ?? ""]);
+      const text = agent && ti.prompt ? said.replaceAll(JSON.stringify(ti.prompt).slice(1, -1), "") : said;
+      const status = [...text.matchAll(/status:\s*(done|needs_approval|blocked|failed)\b/g)].at(-1)?.[1];
       if (status || input.tool_name === "SubagentHandback") {
         const from = input.tool_name === "Agent" ? ti.subagent_type : role;
         appendEvent(ctx.logDir, { type: "task.result", actor, data: { from, status: status ?? "unknown" } });

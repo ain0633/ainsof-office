@@ -141,6 +141,26 @@ test("카드 지시문에 적힌 status 는 결과로 치지 않는다", async (
   assert.deepEqual(events(c.logDir).map((e) => e.type), ["tool.result"]);
 });
 
+test("백그라운드 응답에 되돌아온 지시문의 status 는 결과로 치지 않는다", async () => {
+  const c = ctx();
+  const prompt = "id: CR-1\n못 돌리면 status: blocked 로 보고한다";
+  await handle("post", { agent_type: "ainsof-office:operator", tool_name: "Agent", tool_input: { subagent_type: "ainsof-office:codereview", prompt }, tool_response: { status: "async_launched", echoed: prompt } }, c);
+  assert.deepEqual(events(c.logDir).map((e) => e.type), ["tool.result"]);
+});
+
+test("보고 본문에 인용된 status 보다 마지막 줄의 status 를 쓴다", async () => {
+  const c = ctx();
+  await handle("post", { agent_type: "ainsof-office:codereview", agent_id: "r1", tool_name: "SubagentHandback", tool_input: { result: "1. [P2] returns `status: needs_approval`\n합계: P2 1\nstatus: done" } }, c);
+  assert.equal(events(c.logDir).at(-1).data.status, "done");
+});
+
+test("하루 호출 상한을 넘어도 봇의 마지막 보고는 막지 않는다", async () => {
+  const c = ctx();
+  c.rules = { ...c.rules, limits: { ...c.rules.limits, dailyToolCalls: 0 } };
+  const r = await handle("pre", { agent_type: "ainsof-office:developer", agent_id: "d1", tool_name: "SubagentHandback", tool_input: { result: "status: blocked" } }, c);
+  assert.equal(r.hookSpecificOutput.permissionDecision, "allow");
+});
+
 test("시안 승인을 기다리는 결과는 needs_approval 로 기록한다", async () => {
   const c = ctx();
   await handle("post", { agent_type: "ainsof-office:designer", agent_id: "g1", tool_name: "SubagentHandback", tool_input: { result: "디자인 C3 · 단계 기획\nstatus: needs_approval" } }, c);
